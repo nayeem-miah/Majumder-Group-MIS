@@ -1,6 +1,13 @@
 'use client';
 
-import { CheckCircle2, FileText, Info, UploadCloud, X } from 'lucide-react';
+import {
+  CheckCircle2,
+  Download,
+  FileText,
+  Info,
+  UploadCloud,
+  X,
+} from 'lucide-react';
 import { useState } from 'react';
 import {
   Button,
@@ -8,7 +15,7 @@ import {
   ErrorBanner,
   PageHeader,
 } from '../../../components/ui';
-import { api } from '../../../lib/api';
+import { api, ApiError } from '../../../lib/api';
 
 const REQUIRED_COLUMNS = [
   { key: 'prod_date', note: 'YYYY-MM-DD' },
@@ -21,16 +28,71 @@ const REQUIRED_COLUMNS = [
   { key: 'defect_qty', note: 'integer' },
 ];
 
+// Header row plus one clearly fake sample row. The sample row uses a seeded
+// style so uploading it unedited still succeeds in a fresh demo database.
+const TEMPLATE_CSV =
+  [
+    REQUIRED_COLUMNS.map((column) => column.key).join(','),
+    '2026-11-27,1,1,HM-TSHIRT-2026-A1,32,480,420,6',
+  ].join('\n') + '\n';
+
+type RowError = {
+  row?: number;
+  field?: string;
+  message?: string;
+};
+
 export default function Csv() {
   const [file, setFile] = useState<File | null>(null);
   const [busy, setBusy] = useState(false);
   const [result, setResult] = useState<any>();
   const [error, setError] = useState('');
+  const [rowErrors, setRowErrors] = useState<RowError[]>([]);
+
+  function downloadTemplate() {
+    const blob = new Blob([TEMPLATE_CSV], { type: 'text/csv;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = 'garmentflow-production-template.csv';
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    URL.revokeObjectURL(url);
+  }
+
+  async function selectFile(selected: File | null) {
+    setFile(selected);
+    setResult(undefined);
+    setError('');
+    setRowErrors([]);
+
+    if (!selected) return;
+
+    // Friendly early warning: the most common mistakes are a header-only file
+    // (downloaded template left untouched) or a file with no rows at all.
+    try {
+      const text = await selected.text();
+      const dataLines = text
+        .split(/\r?\n/)
+        .map((line) => line.trim())
+        .filter((line) => line.length > 0)
+        .slice(1);
+      if (dataLines.length === 0) {
+        setError(
+          'This file has only a header row, so there is nothing to import. Add at least one production row below the header — or download the template below, which includes a ready sample row.',
+        );
+      }
+    } catch {
+      // If the browser cannot read it, let the server produce the message.
+    }
+  }
 
   async function upload() {
     if (!file || busy) return;
     setBusy(true);
     setError('');
+    setRowErrors([]);
     setResult(undefined);
     const form = new FormData();
     form.append('file', file);
@@ -41,7 +103,14 @@ export default function Csv() {
       });
       setResult(response.data);
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Upload failed');
+      if (e instanceof ApiError) {
+        setError(e.message);
+        setRowErrors(
+          Array.isArray(e.errors) ? (e.errors as RowError[]) : [],
+        );
+      } else {
+        setError(e instanceof Error ? e.message : 'Upload failed');
+      }
     } finally {
       setBusy(false);
     }
@@ -51,6 +120,7 @@ export default function Csv() {
     setFile(null);
     setResult(undefined);
     setError('');
+    setRowErrors([]);
   };
 
   return (
@@ -61,7 +131,37 @@ export default function Csv() {
       />
 
       {error ? (
-        <ErrorBanner message={error} />
+        <>
+          <ErrorBanner message={error} />
+          {rowErrors.length > 0 ? (
+            <div className="mb-4 overflow-hidden rounded-lg border border-red-200 bg-white">
+              <table className="w-full text-left text-sm">
+                <thead className="bg-red-50 text-xs font-semibold uppercase tracking-wide text-red-700">
+                  <tr>
+                    <th className="px-3 py-2">Row</th>
+                    <th className="px-3 py-2">Field</th>
+                    <th className="px-3 py-2">Problem</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-red-100">
+                  {rowErrors.map((rowError, index) => (
+                    <tr key={`${rowError.row}-${rowError.field}-${index}`}>
+                      <td className="px-3 py-2 font-mono text-xs text-ink">
+                        {rowError.row ?? '—'}
+                      </td>
+                      <td className="px-3 py-2 font-mono text-xs text-ink">
+                        {rowError.field ?? '—'}
+                      </td>
+                      <td className="px-3 py-2 text-red-700">
+                        {rowError.message ?? 'Invalid value'}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : null}
+        </>
       ) : null}
 
       <div className="grid gap-6 lg:grid-cols-[1fr_340px] xl:grid-cols-[1fr_380px]">
@@ -101,9 +201,7 @@ export default function Csv() {
                 accept=".csv,text/csv"
                 className="sr-only"
                 onChange={(e) => {
-                  setFile(e.target.files?.[0] || null);
-                  setResult(undefined);
-                  setError('');
+                  void selectFile(e.target.files?.[0] || null);
                 }}
               />
             </label>
@@ -119,7 +217,15 @@ export default function Csv() {
                   Clear
                 </Button>
               ) : null}
+              <Button variant="secondary" onClick={downloadTemplate}>
+                <Download className="h-4 w-4" aria-hidden="true" />
+                Download template
+              </Button>
             </div>
+            <p className="mt-3 text-xs text-muted">
+              Starting fresh? Download the template — it includes all required
+              headers plus one sample row you can edit or replace.
+            </p>
           </Card>
 
           {/* Success result */}
@@ -167,7 +273,8 @@ export default function Csv() {
                 <span className="mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-brand/10 text-[10px] font-bold text-brand">
                   1
                 </span>
-                Choose a CSV file with the required column headers.
+                Choose a CSV file with the required column headers, or download
+                the template above to start from a ready example.
               </li>
               <li className="flex gap-2">
                 <span className="mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-brand/10 text-[10px] font-bold text-brand">

@@ -34,7 +34,17 @@ const auth = (...roles: string[]) => {
 
             req.user = user;
 
-            if (roles.length && !roles.includes(user.role)) {
+            // The dedicated demo account is read-only: it can browse every
+            // module but cannot create, update or delete operational records.
+            if (user.role === 'DEMO') {
+                const method = req.method.toUpperCase();
+                if (!['GET', 'HEAD', 'OPTIONS'].includes(method)) {
+                    throw new ApiError(httpStatus.FORBIDDEN, "Demo access is read-only.");
+                }
+                if (roles.length && !roles.includes('ADMIN') && !roles.includes('DEMO')) {
+                    throw new ApiError(httpStatus.FORBIDDEN, "You don't have permission to access this resource!");
+                }
+            } else if (roles.length && !roles.includes(user.role)) {
                 throw new ApiError(httpStatus.FORBIDDEN, "You don't have permission to access this resource!");
             }
 

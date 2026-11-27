@@ -25,11 +25,13 @@ DECLARE
     v_style_zr BIGINT;
     v_style_ms BIGINT;
     v_style_uq BIGINT;
+    v_style_tg BIGINT;
 BEGIN
     SELECT style_id INTO v_style_hm FROM styles WHERE style_no = 'HM-TSHIRT-2026-A1';
     SELECT style_id INTO v_style_zr FROM styles WHERE style_no = 'ZR-DENIM-JACKET-09';
     SELECT style_id INTO v_style_ms FROM styles WHERE style_no = 'MS-POLO-CLASSIC-04';
     SELECT style_id INTO v_style_uq FROM styles WHERE style_no = 'UQ-AIRISM-TEE-11';
+    SELECT style_id INTO v_style_tg FROM styles WHERE style_no = 'TG-CARGO-PANT-77';
 
     -- Insert production only if style exists and record not already inserted
     IF v_style_hm IS NOT NULL AND NOT EXISTS (
@@ -58,6 +60,15 @@ BEGIN
     ) THEN
         INSERT INTO line_production (prod_date, floor_no, line_no, style_id, operators_present, working_minutes, output_qty, defect_qty)
         VALUES ('2026-11-21', 3, 5, v_style_uq, 30, 480, 1420, 19);
+    END IF;
+
+    -- Deliberately under-performing line so the dashboard demonstrates the
+    -- "< 65% critical bottleneck" highlight out of the box.
+    IF v_style_tg IS NOT NULL AND NOT EXISTS (
+        SELECT 1 FROM line_production WHERE prod_date = '2026-11-21' AND floor_no = 4 AND line_no = 1 AND style_id = v_style_tg
+    ) THEN
+        INSERT INTO line_production (prod_date, floor_no, line_no, style_id, operators_present, working_minutes, output_qty, defect_qty)
+        VALUES ('2026-11-21', 4, 1, v_style_tg, 32, 480, 300, 21);
     END IF;
 END $$;
 
@@ -97,6 +108,22 @@ BEGIN
             NOW() + INTERVAL '6 hours',
             12,
             'Scheduled'
+        );
+    END IF;
+
+    -- One currently-dispatched vehicle so Fleet Utilization is non-zero on a
+    -- fresh install (1 of 4 active vehicles = 25%).
+    IF v_veh_bus IS NOT NULL AND NOT EXISTS (
+        SELECT 1 FROM trips WHERE vehicle_id = v_veh_bus AND route_name = 'Morning Shift Staff Pickup'
+    ) THEN
+        INSERT INTO trips (vehicle_id, route_name, departure_time, estimated_return_time, passenger_count, status)
+        VALUES (
+            v_veh_bus,
+            'Morning Shift Staff Pickup',
+            NOW() - INTERVAL '30 minutes',
+            NOW() + INTERVAL '2 hours',
+            28,
+            'Dispatched'
         );
     END IF;
 

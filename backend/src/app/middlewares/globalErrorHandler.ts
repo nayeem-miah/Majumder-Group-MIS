@@ -58,6 +58,8 @@ const globalErrorHandler = (
         success,
         message,
         error,
+        // Line-level errors from bulk operations (e.g. CSV upload rows)
+        ...(Array.isArray(err?.errors) ? { errors: err.errors } : {}),
     });
 };
 

@@ -16,7 +16,10 @@ export interface AdminRow {
   updated_at: Date;
 }
 
-const login = async (payload: { email: string; password: string }) => {
+const login = async (
+  payload: { email: string; password: string },
+  role: 'ADMIN' | 'DEMO' = 'ADMIN',
+) => {
   // Query admin using parameterized PostgreSQL Raw SQL
   const result = await query(
     `SELECT admin_id, name, email, password_hash, created_at, updated_at
@@ -41,12 +44,13 @@ const login = async (payload: { email: string; password: string }) => {
     throw new ApiError(httpStatus.UNAUTHORIZED, 'Invalid credentials');
   }
 
-  // Generate tokens with admin identity, role = 'ADMIN' for backward and RBAC compatibility
+  // Generate tokens with the admin identity. Normal logins are ADMIN; the
+  // dedicated demo account is issued a read-only DEMO role.
   const tokenPayload = {
     userId: admin.admin_id.toString(),
     adminId: admin.admin_id.toString(),
     email: admin.email,
-    role: 'ADMIN',
+    role,
   };
 
   const accessToken = jwtHelper.generateToken(
@@ -67,7 +71,12 @@ const login = async (payload: { email: string; password: string }) => {
   };
 };
 
-const getMe = async (userPayload: { userId?: string; adminId?: string; email?: string }) => {
+const getMe = async (userPayload: {
+  userId?: string;
+  adminId?: string;
+  email?: string;
+  role?: string;
+}) => {
   let result;
   if (userPayload.adminId || userPayload.userId) {
     result = await query(
@@ -96,7 +105,7 @@ const getMe = async (userPayload: { userId?: string; adminId?: string; email?: s
     admin_id: admin.admin_id.toString(),
     name: admin.name,
     email: admin.email,
-    role: 'ADMIN',
+    role: userPayload.role || 'ADMIN',
     created_at: admin.created_at,
     updated_at: admin.updated_at,
   };

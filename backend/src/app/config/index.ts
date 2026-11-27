@@ -48,6 +48,11 @@ export default {
     password: process.env.ADMIN_PASSWORD,
   },
 
+  demo: {
+    email: process.env.DEMO_ADMIN_EMAIL,
+    password: process.env.DEMO_ADMIN_PASSWORD,
+  },
+
   salt_rounds: Number(process.env.SALT_ROUNDS),
 
   reset_pass_link: process.env.RESET_PASS_LINK,

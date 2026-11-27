@@ -97,7 +97,18 @@ const bulkUploadProduction = async (filePath: string) => {
   }
 
   if (rows.length === 0) {
-    throw new ApiError(httpStatus.BAD_REQUEST, 'CSV contains headers but no data rows');
+    const errRes: any = new ApiError(
+      httpStatus.BAD_REQUEST,
+      'The CSV has a header row but no data rows. Add at least one production row under the header (or download the template, which already includes a sample row), then upload again.'
+    );
+    errRes.errors = [
+      {
+        row: 2,
+        field: 'file',
+        message: 'No data rows found after the header row.',
+      },
+    ];
+    throw errRes;
   }
 
   const parsedRows: ParsedCsvRow[] = [];

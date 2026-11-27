@@ -5,6 +5,8 @@ export class ApiError extends Error {
     message: string,
     public status = 0,
     public detail?: unknown,
+    /** Line/field level errors returned by bulk endpoints (e.g. CSV rows). */
+    public errors?: unknown,
   ) {
     super(message);
   }
@@ -55,6 +57,7 @@ export async function api<T>(
       body.message || 'Request failed',
       res.status,
       body.error,
+      body.errors,
     );
   }
   return body;

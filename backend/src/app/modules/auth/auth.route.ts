@@ -5,6 +5,7 @@ import { AuthController } from './auth.controller';
 const router = express.Router();
 
 router.post('/login', AuthController.login);
+router.post('/demo-login', AuthController.demoLogin);
 router.post('/logout', AuthController.logout);
 router.get('/me', auth('ADMIN'), AuthController.getMe);
 router.post('/forgot-password', AuthController.forgotPassword);

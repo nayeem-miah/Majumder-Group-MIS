@@ -1,12 +1,22 @@
 import multer from 'multer';
+import os from 'os';
 import path from 'path';
 import fs from 'fs';
 import ApiError from '../errors/apiError';
 import httpStatus from 'http-status';
 
-const uploadDir = path.join(process.cwd(), '.tmp', 'uploads');
-if (!fs.existsSync(uploadDir)) {
+/**
+ * CSV files are parsed immediately after upload and then deleted, so they only
+ * need a scratch location. Serverless platforms (Vercel) expose a read-only
+ * project filesystem and only allow writes under the OS temp directory, so use
+ * that everywhere instead of writing into the project folder.
+ */
+const uploadDir = path.join(os.tmpdir(), 'garmentflow-uploads');
+try {
   fs.mkdirSync(uploadDir, { recursive: true });
+} catch (error) {
+  // Do not crash the whole API at import time if the temp dir is unavailable.
+  console.error('Unable to create CSV upload temp directory:', error);
 }
 
 const storage = multer.diskStorage({

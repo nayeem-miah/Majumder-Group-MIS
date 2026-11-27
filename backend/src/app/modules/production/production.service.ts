@@ -14,10 +14,15 @@ export interface ProductionPayload {
 }
 
 /**
- * Calculates industrial garment efficiency dynamically:
+ * Calculates industrial MajumderGroup efficiency dynamically:
  * Efficiency % = ((Output Qty × SMV) / (Operators Present × Working Minutes)) × 100
  */
-export const calculateEfficiency = (outputQty: number, smv: number, operators: number, minutes: number): number => {
+export const calculateEfficiency = (
+  outputQty: number,
+  smv: number,
+  operators: number,
+  minutes: number,
+): number => {
   const availableMinutes = operators * minutes;
   if (availableMinutes <= 0) return 0;
   const earnedMinutes = outputQty * smv;
@@ -43,11 +48,14 @@ const createProduction = async (payload: ProductionPayload) => {
     // 1. Lock the relevant style row using SELECT ... FOR UPDATE to prevent race conditions
     const styleRes = await client.query(
       'SELECT style_id, style_no, buyer_name, smv, order_qty FROM styles WHERE style_id = $1 FOR UPDATE',
-      [payload.style_id]
+      [payload.style_id],
     );
 
     if (styleRes.rows.length === 0) {
-      throw new ApiError(httpStatus.NOT_FOUND, `Style ID '${payload.style_id}' does not exist`);
+      throw new ApiError(
+        httpStatus.NOT_FOUND,
+        `Style ID '${payload.style_id}' does not exist`,
+      );
     }
 
     const style = styleRes.rows[0];
@@ -57,7 +65,7 @@ const createProduction = async (payload: ProductionPayload) => {
     // 2. Check cumulative output across ALL production lines
     const cumRes = await client.query(
       'SELECT COALESCE(SUM(output_qty), 0)::INT as total_produced FROM line_production WHERE style_id = $1',
-      [payload.style_id]
+      [payload.style_id],
     );
     const alreadyProduced = parseInt(cumRes.rows[0].total_produced, 10);
     const remainingQuantity = orderQty - alreadyProduced;
@@ -66,7 +74,7 @@ const createProduction = async (payload: ProductionPayload) => {
     if (alreadyProduced + payload.output_qty > orderQty) {
       const err: any = new ApiError(
         httpStatus.BAD_REQUEST,
-        'Production quantity exceeds the remaining order quantity'
+        'Production quantity exceeds the remaining order quantity',
       );
       err.data = {
         orderQuantity: orderQty,
@@ -93,13 +101,18 @@ const createProduction = async (payload: ProductionPayload) => {
         payload.working_minutes,
         payload.output_qty,
         payload.defect_qty,
-      ]
+      ],
     );
 
     await client.query('COMMIT');
 
     const row = insertRes.rows[0];
-    const efficiency = calculateEfficiency(row.output_qty, smv, row.operators_present, row.working_minutes);
+    const efficiency = calculateEfficiency(
+      row.output_qty,
+      smv,
+      row.operators_present,
+      row.working_minutes,
+    );
     const dhu = calculateDHU(row.defect_qty, row.output_qty);
 
     return {
@@ -176,7 +189,8 @@ const getAllProduction = async (queryParams: Record<string, any>) => {
     paramIndex++;
   }
 
-  const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
+  const whereClause =
+    conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
 
   const allowedSortCols: Record<string, string> = {
     prod_id: 'lp.prod_id',
@@ -199,7 +213,7 @@ const getAllProduction = async (queryParams: Record<string, any>) => {
   const offset = (pageNum - 1) * limitNum;
 
   const dataQuery = `
-    SELECT 
+    SELECT
       lp.prod_id,
       lp.prod_date,
       lp.floor_no,
@@ -227,7 +241,12 @@ const getAllProduction = async (queryParams: Record<string, any>) => {
   // Compute dynamic efficiency and DHU for each row
   const rows = dataResult.rows.map((row) => {
     const smv = parseFloat(row.smv);
-    const eff = calculateEfficiency(row.output_qty, smv, row.operators_present, row.working_minutes);
+    const eff = calculateEfficiency(
+      row.output_qty,
+      smv,
+      row.operators_present,
+      row.working_minutes,
+    );
     const dhu = calculateDHU(row.defect_qty, row.output_qty);
     return {
       prod_id: row.prod_id,
@@ -263,7 +282,7 @@ const getAllProduction = async (queryParams: Record<string, any>) => {
 
 const getProductionById = async (prodId: string | number) => {
   const result = await query(
-    `SELECT 
+    `SELECT
       lp.prod_id,
       lp.prod_date,
       lp.floor_no,
@@ -282,7 +301,7 @@ const getProductionById = async (prodId: string | number) => {
     FROM line_production lp
     JOIN styles s ON lp.style_id = s.style_id
     WHERE lp.prod_id = $1`,
-    [prodId]
+    [prodId],
   );
 
   if (result.rows.length === 0) {
@@ -291,7 +310,12 @@ const getProductionById = async (prodId: string | number) => {
 
   const row = result.rows[0];
   const smv = parseFloat(row.smv);
-  const eff = calculateEfficiency(row.output_qty, smv, row.operators_present, row.working_minutes);
+  const eff = calculateEfficiency(
+    row.output_qty,
+    smv,
+    row.operators_present,
+    row.working_minutes,
+  );
   const dhu = calculateDHU(row.defect_qty, row.output_qty);
 
   return {
@@ -302,7 +326,10 @@ const getProductionById = async (prodId: string | number) => {
   };
 };
 
-const updateProduction = async (prodId: string | number, payload: Partial<ProductionPayload>) => {
+const updateProduction = async (
+  prodId: string | number,
+  payload: Partial<ProductionPayload>,
+) => {
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
@@ -310,7 +337,7 @@ const updateProduction = async (prodId: string | number, payload: Partial<Produc
     // 1. Fetch current production record with lock
     const prodRes = await client.query(
       'SELECT prod_id, prod_date, floor_no, line_no, style_id, operators_present, working_minutes, output_qty, defect_qty FROM line_production WHERE prod_id = $1 FOR UPDATE',
-      [prodId]
+      [prodId],
     );
 
     if (prodRes.rows.length === 0) {
@@ -323,7 +350,7 @@ const updateProduction = async (prodId: string | number, payload: Partial<Produc
     // 2. Lock style row FOR UPDATE
     const styleRes = await client.query(
       'SELECT style_id, style_no, buyer_name, smv, order_qty FROM styles WHERE style_id = $1 FOR UPDATE',
-      [targetStyleId]
+      [targetStyleId],
     );
 
     if (styleRes.rows.length === 0) {
@@ -334,16 +361,25 @@ const updateProduction = async (prodId: string | number, payload: Partial<Produc
     const smv = parseFloat(style.smv);
 
     // 3. Cumulative validation excluding current record
-    const updatedOutputQty = payload.output_qty !== undefined ? payload.output_qty : currentProd.output_qty;
-    const updatedDefectQty = payload.defect_qty !== undefined ? payload.defect_qty : currentProd.defect_qty;
+    const updatedOutputQty =
+      payload.output_qty !== undefined
+        ? payload.output_qty
+        : currentProd.output_qty;
+    const updatedDefectQty =
+      payload.defect_qty !== undefined
+        ? payload.defect_qty
+        : currentProd.defect_qty;
 
     if (updatedDefectQty > updatedOutputQty) {
-      throw new ApiError(httpStatus.BAD_REQUEST, 'defect_qty cannot exceed output_qty');
+      throw new ApiError(
+        httpStatus.BAD_REQUEST,
+        'defect_qty cannot exceed output_qty',
+      );
     }
 
     const cumRes = await client.query(
       'SELECT COALESCE(SUM(output_qty), 0)::INT as total_produced FROM line_production WHERE style_id = $1 AND prod_id != $2',
-      [targetStyleId, prodId]
+      [targetStyleId, prodId],
     );
     const alreadyProduced = parseInt(cumRes.rows[0].total_produced, 10);
     const remainingQuantity = orderQty - alreadyProduced;
@@ -351,7 +387,7 @@ const updateProduction = async (prodId: string | number, payload: Partial<Produc
     if (alreadyProduced + updatedOutputQty > orderQty) {
       const err: any = new ApiError(
         httpStatus.BAD_REQUEST,
-        'Production quantity exceeds the remaining order quantity'
+        'Production quantity exceeds the remaining order quantity',
       );
       err.data = {
         orderQuantity: orderQty,
@@ -363,10 +399,18 @@ const updateProduction = async (prodId: string | number, payload: Partial<Produc
     }
 
     const updatedProdDate = payload.prod_date || currentProd.prod_date;
-    const updatedFloorNo = payload.floor_no !== undefined ? payload.floor_no : currentProd.floor_no;
-    const updatedLineNo = payload.line_no !== undefined ? payload.line_no : currentProd.line_no;
-    const updatedOperators = payload.operators_present !== undefined ? payload.operators_present : currentProd.operators_present;
-    const updatedMinutes = payload.working_minutes !== undefined ? payload.working_minutes : currentProd.working_minutes;
+    const updatedFloorNo =
+      payload.floor_no !== undefined ? payload.floor_no : currentProd.floor_no;
+    const updatedLineNo =
+      payload.line_no !== undefined ? payload.line_no : currentProd.line_no;
+    const updatedOperators =
+      payload.operators_present !== undefined
+        ? payload.operators_present
+        : currentProd.operators_present;
+    const updatedMinutes =
+      payload.working_minutes !== undefined
+        ? payload.working_minutes
+        : currentProd.working_minutes;
 
     const updateRes = await client.query(
       `UPDATE line_production
@@ -384,13 +428,18 @@ const updateProduction = async (prodId: string | number, payload: Partial<Produc
         updatedOutputQty,
         updatedDefectQty,
         prodId,
-      ]
+      ],
     );
 
     await client.query('COMMIT');
 
     const row = updateRes.rows[0];
-    const efficiency = calculateEfficiency(row.output_qty, smv, row.operators_present, row.working_minutes);
+    const efficiency = calculateEfficiency(
+      row.output_qty,
+      smv,
+      row.operators_present,
+      row.working_minutes,
+    );
     const dhu = calculateDHU(row.defect_qty, row.output_qty);
 
     return {
@@ -416,7 +465,7 @@ const updateProduction = async (prodId: string | number, payload: Partial<Produc
 const deleteProduction = async (prodId: string | number) => {
   const result = await query(
     'DELETE FROM line_production WHERE prod_id = $1 RETURNING prod_id, prod_date, floor_no, line_no, output_qty',
-    [prodId]
+    [prodId],
   );
 
   if (result.rows.length === 0) {
@@ -454,10 +503,11 @@ const getProductionSummary = async (queryParams: Record<string, any>) => {
     paramIndex++;
   }
 
-  const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
+  const whereClause =
+    conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
 
   const summaryQuery = `
-    SELECT 
+    SELECT
       COUNT(lp.prod_id)::INT as total_entries,
       COALESCE(SUM(lp.output_qty), 0)::INT as total_output,
       COALESCE(SUM(lp.defect_qty), 0)::INT as total_defects,
@@ -476,8 +526,14 @@ const getProductionSummary = async (queryParams: Record<string, any>) => {
   const totalOutput = parseInt(row.total_output, 10) || 0;
   const totalDefects = parseInt(row.total_defects, 10) || 0;
 
-  const overallEfficiency = availableMinutes > 0 ? Math.round((earnedMinutes / availableMinutes) * 10000) / 100 : 0;
-  const overallDhu = totalOutput > 0 ? Math.round((totalDefects / totalOutput) * 10000) / 100 : 0;
+  const overallEfficiency =
+    availableMinutes > 0
+      ? Math.round((earnedMinutes / availableMinutes) * 10000) / 100
+      : 0;
+  const overallDhu =
+    totalOutput > 0
+      ? Math.round((totalDefects / totalOutput) * 10000) / 100
+      : 0;
 
   return {
     totalEntries: row.total_entries,

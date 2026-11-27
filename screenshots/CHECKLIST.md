@@ -1,5 +1,13 @@
 # Majumder Group MIS - Screenshot Submission Checklist
 
+Produced files in this folder:
+
+1. `01-login.png` - secure, icon-free admin login with demo access
+2. `02-dashboard.png` - executive MIS dashboard (efficiency, bottlenecks, fleet, completion)
+3. `03-vehicle-overlap-error.png` - vehicle time-overlap conflict alert
+4. `04-csv-rollback-error.png` - atomic CSV rollback with exact line/field error
+5. `05-mobile-dashboard.png` - mobile responsive layout (390 px)
+
 This document details the exact requirements, view endpoints, and verification data for the 5 submission screenshots.
 
 ---
