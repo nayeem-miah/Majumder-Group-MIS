@@ -1,227 +1,305 @@
-# Majumder Group MIS (Apparel Manufacturing & Logistics MIS)
+<div align="center">
 
-Majumder Group MIS is a high-performance, enterprise-grade Management Information System built for apparel manufacturers. It provides real-time visibility and control over garment styles, floor and line production efficiency, defect monitoring (DHU), vehicle fleet dispatch, atomic CSV bulk uploads, and an Executive MIS Dashboard.
+# 🏭 Majumder Group — GarmentFlow MIS
+
+**Enterprise Management Information System for Apparel Manufacturers**
+
+[![Node.js](https://img.shields.io/badge/Node.js-18+-339933?logo=node.js&logoColor=white&style=flat-square)](https://nodejs.org)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.x-3178C6?logo=typescript&logoColor=white&style=flat-square)](https://www.typescriptlang.org)
+[![Next.js](https://img.shields.io/badge/Next.js-15-000000?logo=next.js&logoColor=white&style=flat-square)](https://nextjs.org)
+[![PostgreSQL](https://img.shields.io/badge/PostgreSQL-15+-4169E1?logo=postgresql&logoColor=white&style=flat-square)](https://www.postgresql.org)
+[![Tailwind CSS](https://img.shields.io/badge/Tailwind-3.x-06B6D4?logo=tailwindcss&logoColor=white&style=flat-square)](https://tailwindcss.com)
+[![License: ISC](https://img.shields.io/badge/License-ISC-blue?style=flat-square)](LICENSE)
+
+[Live Demo](#-live-demo) · [Quick Start](#-quick-start) · [Deploy on Vercel](#-deploy-on-vercel) · [API Docs](#-api-reference)
+
+</div>
+
+---
+
+## 📌 Overview
+
+**GarmentFlow MIS** is a full-stack, production-ready Management Information System built for the garment and apparel manufacturing industry. It provides real-time visibility and control over:
+
+- **Floor & Line Production** — efficiency, DHU, hourly tracking
+- **Style & Order Management** — buyers, SMV, order quantities, completion %
+- **Vehicle Fleet & Trip Dispatch** — scheduling, conflict detection, utilization
+- **Atomic CSV Bulk Uploads** — ACID-compliant batch imports with rollback
+- **Executive Dashboard** — live KPIs: factory efficiency, bottleneck lines, fleet utilization, style completion
+
+> **Architecture constraint:** 100% Raw SQL — no ORMs. All queries use parameterized `pg` statements directly against PostgreSQL.
+
+---
+
+## ✨ Features
+
+| Module | Capability |
+|---|---|
+| 🔐 **Auth** | JWT (Bearer + HTTP-only cookie), bcrypt, demo login, session guard |
+| 👕 **Styles** | CRUD, buyer tracking, SMV, order qty, deletion safety |
+| 🏭 **Production** | Hourly entries, efficiency %, DHU %, over-production lock (`SELECT FOR UPDATE`) |
+| 📊 **Dashboard** | Factory efficiency, bottleneck lines, fleet utilization, style completion |
+| 🚛 **Vehicles** | Fleet registry, seat capacity, `Active` / `Under Maintenance` status |
+| 🗺️ **Trips** | Scheduling with time-overlap detection, seat capacity check, status lifecycle |
+| 📂 **CSV Upload** | Atomic batch import — full rollback if any single row fails |
 
 ---
 
 ## 🛠 Technology Stack
 
-- **Backend Runtime:** Node.js (v18+)
-- **Framework:** Express.js 4.x
-- **Language:** TypeScript 5.x
-- **Database:** Supabase PostgreSQL (PostgreSQL 15+)
-- **Database Driver:** Native PostgreSQL Client (`pg`) with parameterized Raw SQL
-- **Authentication:** JWT (`jsonwebtoken`) with HTTP-only Cookies and Bearer Tokens
-- **Password Security:** `bcrypt` (12 salt rounds)
-- **Validation:** Zod schemas
-- **File Upload:** Multer with strict MIME and extension filtering
+### Backend
+| Layer | Technology |
+|---|---|
+| Runtime | Node.js 18+ |
+| Framework | Express.js 4.x |
+| Language | TypeScript 5.x |
+| Database | Supabase / PostgreSQL 15+ |
+| DB Driver | `pg` (raw parameterized SQL — no ORM) |
+| Auth | `jsonwebtoken` + HTTP-only Cookies + Bearer Tokens |
+| Password | `bcrypt` (12 salt rounds) |
+| Validation | Zod schemas |
+| File Upload | Multer (strict MIME + extension filtering) |
 
-> **Strict Architectural Constraint:** 100% Raw SQL queries. Zero ORMs (No Prisma, MongoDB, Mongoose, or TypeORM).
-
----
-
-## 🚀 System Features
-
-1. **Enterprise Admin Authentication:**
-   - Secure login, logout, password reset, and profile (`/auth/me`) retrieval.
-   - Idempotent database admin seeder reading from environment variables.
-   - Passwords securely hashed with bcrypt; password hashes are never exposed.
-
-2. **Garment Style Management:**
-   - Complete CRUD operations for garment styles with unique `style_no`.
-   - Buyer tracking, Standard Minute Value (SMV), and order quantities.
-   - Deletion safety preventing removal of styles with active production history.
-
-3. **Hourly Line Production & Industrial Metrics:**
-   - Dynamic **Efficiency %** calculation:
-     $$\text{Efficiency \%} = \left(\frac{\text{Output Qty} \times \text{SMV}}{\text{Operators Present} \times \text{Working Minutes}}\right) \times 100$$
-   - Dynamic **Defects per Hundred Units (DHU %)** calculation:
-     $$\text{DHU \%} = \left(\frac{\text{Defect Qty}}{\text{Output Qty}}\right) \times 100$$
-   - **Cumulative Order Quantity Validation** using PostgreSQL row-level locking (`SELECT ... FOR UPDATE`) preventing over-production.
-
-4. **Logistics & Fleet Dispatch Management:**
-   - Complete vehicle fleet management with capacity and status tracking (`Active`, `Under Maintenance`).
-   - Vehicle trip scheduling with strict **Seat Capacity Validation**.
-   - **Time Overlap Conflict Detection**:
-     $$\text{existing\_departure} < \text{new\_return} \quad \text{AND} \quad \text{existing\_return} > \text{new\_departure}$$
-   - Status lifecycle enforcement: `Scheduled` &rarr; `Dispatched` &rarr; `Completed` / `Cancelled`.
-
-5. **Atomic CSV Bulk Production Upload:**
-   - Bulk uploads with complete ACID transaction rollback (`BEGIN` ... `COMMIT` / `ROLLBACK`).
-   - If any single row fails (syntax, non-existent style, or over-production), the entire batch is rolled back.
-
-6. **Executive MIS Summary Dashboard:**
-   - **Overall Factory Efficiency:** Dynamic weighted average based on earned vs available operator minutes.
-   - **Critical Bottleneck Lines:** Identifies lines operating below 65% efficiency with exact additional pieces needed to recover target efficiency.
-   - **Fleet Utilization:** Real-time percentage of active fleet currently dispatched.
-   - **Style Completion:** Real-time production progress against order quantities.
+### Frontend
+| Layer | Technology |
+|---|---|
+| Framework | Next.js 15 (App Router) |
+| Language | TypeScript 5.x |
+| Styling | Tailwind CSS 3 |
+| Forms | React Hook Form + Zod |
+| Icons | Lucide React |
+| Toasts | Sonner |
 
 ---
 
-## 📁 Folder Structure
+## 🚀 Live Demo
+
+| Service | URL |
+|---|---|
+| 🌐 Frontend | *(add after deployment)* |
+| ⚙️ Backend API | *(add after deployment)* |
+
+**Demo credentials** are available via the **Demo Login** button on the login page (configured via `DEMO_ADMIN_EMAIL` / `DEMO_ADMIN_PASSWORD` environment variables).
+
+---
+
+## ⚡ Quick Start
+
+### Prerequisites
+- Node.js 18+
+- PostgreSQL 15+ (or a [Supabase](https://supabase.com) project)
+
+### 1. Clone the repository
+
+```bash
+git clone https://github.com/nayeem-miah/Majumder-Group-MIS.git
+cd Majumder-Group-MIS
+```
+
+### 2. Backend setup
+
+```bash
+cd backend
+cp .env.example .env     # fill in DATABASE_URL, JWT secrets, ADMIN credentials
+npm install
+npm run dev              # starts on http://localhost:5000
+```
+
+### 3. Database setup
+
+Run the schema SQL in your Supabase SQL Editor (or via `psql`):
+
+```bash
+# Schema + indexes
+psql "$DATABASE_URL" -f backend/database/schema.sql
+
+# Optional seed data
+psql "$DATABASE_URL" -f backend/database/seed.sql
+
+# Seed the first admin account from .env
+npx ts-node backend/scripts/seed-admin.ts
+```
+
+### 4. Frontend setup
+
+```bash
+cd frontend
+cp .env.example .env.local   # set NEXT_PUBLIC_API_URL=http://localhost:5000/api
+npm install
+npm run dev                   # starts on http://localhost:3000
+```
+
+Open **http://localhost:3000** and sign in.
+
+---
+
+## ☁️ Deploy on Vercel
+
+This project deploys as **two separate Vercel projects** — one for the backend, one for the frontend.
+
+### Deploy the Backend
+
+1. Import the repo on [vercel.com/new](https://vercel.com/new)
+2. Set **Root Directory** → `backend`
+3. Set **Framework Preset** → `Other`
+4. Add these **Environment Variables**:
+
+```
+DATABASE_URL          postgresql://...
+JWT_ACCESS_SECRET     <random-secret>
+JWT_REFRESH_SECRET    <random-secret>
+JWT_ACCESS_EXPIRES_IN 5d
+JWT_REFRESH_EXPIRES_IN 30d
+ADMIN_EMAIL           admin@example.com
+ADMIN_PASSWORD        your_secure_password
+DEMO_ADMIN_EMAIL      admin@example.com
+DEMO_ADMIN_PASSWORD   your_secure_password
+NODE_ENV              production
+```
+
+5. Deploy. Copy the production URL (e.g. `https://majumder-api.vercel.app`).
+
+### Deploy the Frontend
+
+1. Import the **same repo** again on Vercel
+2. Set **Root Directory** → `frontend`
+3. Set **Framework Preset** → `Next.js`
+4. Add this **Environment Variable**:
+
+```
+NEXT_PUBLIC_API_URL   https://your-backend.vercel.app/api
+```
+
+5. Deploy. The frontend is live.
+
+---
+
+## 📁 Project Structure
 
 ```
 Majumder-Group-MIS/
 ├── backend/
 │   ├── database/
-│   │   ├── schema.sql           # Database schema & indexes
-│   │   └── seed.sql             # Idempotent seed data
-│   ├── postman/
-│   │   └── Majumder-Group-MIS.postman_collection.json
+│   │   ├── schema.sql            # Tables, indexes, constraints
+│   │   └── seed.sql              # Optional demo data
 │   ├── scripts/
-│   │   └── seed-admin.ts        # Admin seeder CLI
+│   │   └── seed-admin.ts         # One-time admin account seeder
 │   ├── src/
 │   │   ├── app/
-│   │   │   ├── config/          # Centralized configuration
-│   │   │   ├── constants/       # Role & status constants
-│   │   │   ├── db/              # pg Pool & connection tester
-│   │   │   ├── errors/          # Custom ApiError
-│   │   │   ├── middlewares/     # JWT auth, error handler, validation
+│   │   │   ├── config/           # Centralised env config
+│   │   │   ├── db/               # pg Pool + connection test
+│   │   │   ├── middlewares/      # JWT auth, error handler, Zod validation
 │   │   │   ├── modules/
-│   │   │   │   ├── auth/        # Authentication module
-│   │   │   │   ├── style/       # Style management module
-│   │   │   │   ├── production/  # Production & CSV upload module
-│   │   │   │   ├── vehicle/     # Fleet management module
-│   │   │   │   ├── trip/        # Dispatch & trip module
-│   │   │   │   └── dashboard/   # Executive MIS dashboard module
-│   │   │   └── routes/          # Unified /api and /api/v1 router
-│   │   ├── app.ts               # Express application
-│   │   └── server.ts            # Server entry point with graceful shutdown
-│   ├── .env.example
-│   ├── package.json
-│   └── tsconfig.json
-├── csv-tests/                   # Sample CSV test files for upload & rollback
-├── screenshots/                 # Submission screenshot checklist
-├── database.sql                 # Complete PostgreSQL dump
+│   │   │   │   ├── auth/
+│   │   │   │   ├── style/
+│   │   │   │   ├── production/
+│   │   │   │   ├── vehicle/
+│   │   │   │   ├── trip/
+│   │   │   │   └── dashboard/
+│   │   │   └── routes/           # /api and /api/v1 unified router
+│   │   ├── app.ts                # Express app (Vercel entry point)
+│   │   └── server.ts             # HTTP server for local dev
+│   ├── vercel.json
+│   └── .env.example
+├── frontend/
+│   ├── src/
+│   │   ├── app/
+│   │   │   ├── dashboard/        # All dashboard pages
+│   │   │   │   ├── page.tsx      # Executive overview
+│   │   │   │   ├── styles/
+│   │   │   │   ├── production/
+│   │   │   │   ├── hourly-production/
+│   │   │   │   ├── vehicles/
+│   │   │   │   ├── trips/
+│   │   │   │   └── csv-upload/
+│   │   │   └── login/
+│   │   ├── components/
+│   │   │   ├── AppShell.tsx      # Sidebar + header layout
+│   │   │   ├── Crud.tsx          # Generic CRUD table + modal
+│   │   │   ├── StyleCombobox.tsx # Searchable style picker
+│   │   │   └── ui.tsx            # Button, Card, Badge, etc.
+│   │   └── lib/
+│   │       ├── api.ts            # Typed fetch wrapper
+│   │       └── types.ts          # Shared TypeScript types
+│   └── .env.example
+├── csv-tests/                    # Sample CSV files for bulk upload testing
+├── database.sql                  # Full PostgreSQL dump
 └── README.md
 ```
 
 ---
 
-## ⚙️ Installation & Setup
+## 📡 API Reference
 
-### 1. Clone & Install Dependencies
-```bash
-git clone https://github.com/nayeem-miah/Majumder-Group-MIS.git
-cd Majumder-Group-MIS/backend
-npm install
-```
+All endpoints under `/api/*` require `Authorization: Bearer <token>` (except `/auth/login` and `/auth/demo-login`).
 
-### 2. Configure Environment Variables
-Copy `.env.example` to `.env`:
-```bash
-cp .env.example .env
-```
-Update credentials:
-```env
-PORT=5000
-NODE_ENV=development
+### Auth
+| Method | Endpoint | Description |
+|---|---|---|
+| `POST` | `/api/auth/login` | Email + password login |
+| `POST` | `/api/auth/demo-login` | Server-resolved demo login |
+| `GET` | `/api/auth/me` | Authenticated admin profile |
+| `POST` | `/api/auth/logout` | Clear auth cookies |
 
-# PostgreSQL Connection String (Supabase Direct or Pooler)
-DATABASE_URL=postgresql://postgres:[PASSWORD]@[HOST]:[PORT]/postgres?sslmode=require
+### Styles
+| Method | Endpoint | Description |
+|---|---|---|
+| `POST` | `/api/styles` | Create style |
+| `GET` | `/api/styles` | Paginated list (`searchTerm`, `buyer_name`) |
+| `GET` | `/api/styles/:id` | Style detail + cumulative production |
+| `PATCH` | `/api/styles/:id` | Update style |
+| `DELETE` | `/api/styles/:id` | Safe delete (blocked if production history exists) |
 
-# JWT
-JWT_ACCESS_SECRET=your-secure-access-secret
-JWT_REFRESH_SECRET=your-secure-refresh-secret
-JWT_ACCESS_EXPIRES_IN=5d
-JWT_REFRESH_EXPIRES_IN=30d
+### Production
+| Method | Endpoint | Description |
+|---|---|---|
+| `POST` | `/api/production` | Create hourly entry (over-production lock) |
+| `GET` | `/api/production` | List entries (`prod_date`, `floor_no`, `line_no`, `style_id`) |
+| `PATCH` | `/api/production/:id` | Update entry |
+| `DELETE` | `/api/production/:id` | Delete entry |
+| `GET` | `/api/production/summary` | Aggregated efficiency metrics |
+| `POST` | `/api/production/bulk-upload` | Atomic CSV import (`multipart/form-data`) |
 
-# Initial Admin Credentials (Optional / Seed)
-ADMIN_EMAIL=admin@gmail.com
-ADMIN_PASSWORD=your_secure_password
-SALT_ROUNDS=12
-```
+### Vehicles
+| Method | Endpoint | Description |
+|---|---|---|
+| `POST` | `/api/vehicles` | Register vehicle |
+| `GET` | `/api/vehicles` | List (`status`, `vehicle_type`) |
+| `PATCH` | `/api/vehicles/:id` | Update vehicle |
+| `PATCH` | `/api/vehicles/:id/status` | Change status |
+| `DELETE` | `/api/vehicles/:id` | Delete (blocked if trips exist) |
 
-### 3. Database Schema & Seed Data Import
-Execute the schema and seed scripts using `psql` or the Supabase SQL Editor:
-```bash
-# In Supabase SQL Editor or via psql:
-psql -d "YOUR_DATABASE_URL" -f database/schema.sql
-psql -d "YOUR_DATABASE_URL" -f database/seed.sql
-```
+### Trips
+| Method | Endpoint | Description |
+|---|---|---|
+| `POST` | `/api/trips` | Schedule trip (overlap + capacity check) |
+| `GET` | `/api/trips` | List trips (`status`) |
+| `PATCH` | `/api/trips/:id/dispatch` | `Scheduled` → `Dispatched` |
+| `PATCH` | `/api/trips/:id/complete` | `Dispatched` → `Completed` |
+| `PATCH` | `/api/trips/:id/cancel` | Cancel trip |
 
-### 4. Admin Account Seed
-Seed the initial administrator account:
-```bash
-npx ts-node scripts/seed-admin.ts
-```
-
-### 5. Run the Server
-```bash
-# Development mode with hot-reloading
-npm run dev
-
-# Production build and run
-npm run build
-npm start
-```
+### Dashboard
+| Method | Endpoint | Description |
+|---|---|---|
+| `GET` | `/api/dashboard/summary` | Live KPIs: efficiency, bottlenecks, fleet, styles |
 
 ---
 
-## 📡 API Endpoint Documentation
+## 🧮 Business Logic
 
-All management endpoints require Bearer JWT token header: `Authorization: Bearer <TOKEN>`.
+**Efficiency %**
+$$\text{Efficiency} = \frac{\text{Output} \times \text{SMV}}{\text{Operators} \times \text{Working Minutes}} \times 100$$
 
-### Authentication
-- `POST /api/auth/login` - Admin login
-- `GET /api/auth/me` - Authenticated admin profile
-- `POST /api/auth/logout` - Clear auth cookies
+**DHU (Defects per Hundred Units)**
+$$\text{DHU} = \frac{\text{Defect Qty}}{\text{Output Qty}} \times 100$$
 
-### Garment Styles
-- `POST /api/styles` - Create style
-- `GET /api/styles` - Paginated list (`searchTerm`, `buyer_name`, sort)
-- `GET /api/styles/:id` - Style details with cumulative production
-- `PATCH /api/styles/:id` - Update style (locked against cumulative production)
-- `DELETE /api/styles/:id` - Safe delete
+**Bottleneck threshold:** Lines below **65% efficiency** are flagged with the additional pieces required to reach target.
 
-### Line Production
-- `POST /api/production` - Create hourly entry (locked with over-production check)
-- `GET /api/production` - List production (`prod_date`, `floor_no`, `line_no`, `style_id`)
-- `GET /api/production/:id` - Get production entry
-- `PATCH /api/production/:id` - Update entry
-- `DELETE /api/production/:id` - Delete entry
-- `GET /api/production/summary` - Aggregated output, earned minutes & efficiency
-- `POST /api/production/bulk-upload` - Atomic CSV upload (`multipart/form-data`)
-
-### Vehicles & Transport
-- `POST /api/vehicles` - Register vehicle
-- `GET /api/vehicles` - List vehicles (`status`, `vehicle_type`)
-- `GET /api/vehicles/:id` - Vehicle details
-- `PATCH /api/vehicles/:id` - Update vehicle
-- `PATCH /api/vehicles/:id/status` - Update status (`Active` / `Under Maintenance`)
-- `DELETE /api/vehicles/:id` - Safe delete (fails if trips exist)
-
-### Trips & Dispatch
-- `GET /api/trips/availability` - Query available vehicles for time window
-- `POST /api/trips` - Book trip (time overlap & seat capacity checks)
-- `GET /api/trips` - List trips
-- `GET /api/trips/:id` - Trip details
-- `PATCH /api/trips/:id` - Update trip
-- `PATCH /api/trips/:id/dispatch` - Transition `Scheduled` &rarr; `Dispatched`
-- `PATCH /api/trips/:id/complete` - Transition `Dispatched` &rarr; `Completed`
-- `PATCH /api/trips/:id/cancel` - Cancel trip
-
-### Executive MIS Dashboard
-- `GET /api/dashboard/summary` - Real-time metrics:
-  - Overall Factory Efficiency
-  - Critical Bottleneck Lines (< 65% efficiency)
-  - Fleet Utilization
-  - Style Completion Progress
-
----
-
-## 🧪 Testing Instructions
-
-Run the automated test suites:
-```bash
-# Verify TypeScript build
-npx tsc --noEmit
-
-# Run comprehensive MIS business logic tests
-npx ts-node test-comprehensive-all.ts
-```
+**Trip conflict detection:**
+$$\text{existing\_dep} < \text{new\_return} \quad \text{AND} \quad \text{existing\_ret} > \text{new\_dep}$$
 
 ---
 
 ## 📄 License
-ISC License © Md Nayeem Miah
+
+ISC License © [Md Nayeem Miah](https://github.com/nayeem-miah)

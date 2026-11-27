@@ -1,0 +1,7 @@
+export type Meta = { page:number; limit:number; total:number; totalPage:number };
+export type ApiResponse<T> = { success:boolean; message:string; data:T; meta?:Meta };
+export type Style = { style_id:number; buyer_name:string; style_no:string; smv:number; order_qty:number; total_produced?:number; remaining_qty?:number };
+export type Production = { prod_id:number; prod_date:string; floor_no:number; line_no:number; style_id:number; style_no:string; buyer_name:string; smv:number; operators_present:number; working_minutes:number; output_qty:number; defect_qty:number; efficiency:number; dhu:number };
+export type Vehicle = { vehicle_id:number; reg_no:string; vehicle_type:string; seat_capacity:number; status:'Active'|'Under Maintenance' };
+export type Trip = { trip_id:number; vehicle_id:number; reg_no:string; vehicle_type:string; seat_capacity:number; route_name:string; departure_time:string; estimated_return_time:string; passenger_count:number; status:'Scheduled'|'Dispatched'|'Completed'|'Cancelled' };
+export type Dashboard = { overallEfficiency:{percentage:number;totalOutput:number;dhuPercentage:number}; bottleneckLines:Array<{floor_no:number;line_no:number;style_no:string;currentEfficiency:number;additionalPiecesNeeded:number}>; fleetUtilization:{totalActiveVehicles:number;dispatchedVehicles:number;idleVehicles:number;percentage:number}; styleCompletion:Array<{style_id:number;style_no:string;buyer_name:string;orderQuantity:number;totalProduced:number;completionPercentage:number}> };
