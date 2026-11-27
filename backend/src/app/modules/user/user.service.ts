@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import bcrypt from "bcryptjs";
+import bcrypt from "bcrypt";
 import { Request } from "express";
 import ApiError from "../../errors/apiError";
 import { USER_ROLES } from "../../constants/roles";

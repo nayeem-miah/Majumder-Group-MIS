@@ -32,17 +32,6 @@ export default {
     email_from: process.env.EMAIL_FROM,
   },
 
-  stripe: {
-    stripeSecretKey: process.env.STRIPE_SECRET_KEY,
-    stripeWebHookSecret: process.env.STRIPE_WEBHOOK_SECRET,
-    frontendUrl: process.env.FRONTEND_URL,
-  },
-
-  //  redirect url
-  frontendSuccessUrl: process.env.FRONTEND_SUCCESS_URL,
-  frontendFailUrl: process.env.FRONTEND_FAIL_URL,
-  frontendCancelUrl: process.env.FRONTEND_CANCEL_URL,
-
   admin: {
     email: process.env.ADMIN_EMAIL,
     password: process.env.ADMIN_PASSWORD,
