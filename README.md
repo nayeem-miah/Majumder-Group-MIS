@@ -1,6 +1,6 @@
-# GarmentFlow MIS (Apparel Manufacturing & Logistics MIS)
+# Majumder Group MIS (Apparel Manufacturing & Logistics MIS)
 
-GarmentFlow MIS is a high-performance, enterprise-grade Management Information System built for apparel manufacturers. It provides real-time visibility and control over garment styles, floor and line production efficiency, defect monitoring (DHU), vehicle fleet dispatch, atomic CSV bulk uploads, and an Executive MIS Dashboard.
+Majumder Group MIS is a high-performance, enterprise-grade Management Information System built for apparel manufacturers. It provides real-time visibility and control over garment styles, floor and line production efficiency, defect monitoring (DHU), vehicle fleet dispatch, atomic CSV bulk uploads, and an Executive MIS Dashboard.
 
 ---
 
@@ -61,13 +61,13 @@ GarmentFlow MIS is a high-performance, enterprise-grade Management Information S
 ## 📁 Folder Structure
 
 ```
-GarmentFlow-MIS/
+Majumder-Group-MIS/
 ├── backend/
 │   ├── database/
 │   │   ├── schema.sql           # Database schema & indexes
 │   │   └── seed.sql             # Idempotent seed data
 │   ├── postman/
-│   │   └── GarmentFlow-MIS.postman_collection.json
+│   │   └── Majumder-Group-MIS.postman_collection.json
 │   ├── scripts/
 │   │   └── seed-admin.ts        # Admin seeder CLI
 │   ├── src/
