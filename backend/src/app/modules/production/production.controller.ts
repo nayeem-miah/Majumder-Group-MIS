@@ -1,5 +1,6 @@
 import { Request, Response } from 'express';
 import httpStatus from 'http-status';
+import ApiError from '../../errors/apiError';
 import catchAsync from '../../utils/catchAsync';
 import sendResponse from '../../utils/sendResponse';
 import { ProductionService } from './production.service';
@@ -65,6 +66,22 @@ const getProductionSummary = catchAsync(async (req: Request, res: Response) => {
   });
 });
 
+const bulkUploadProduction = catchAsync(async (req: Request, res: Response) => {
+  if (!req.file) {
+    throw new ApiError(httpStatus.BAD_REQUEST, 'Please upload a CSV file');
+  }
+
+  const { CsvBulkUploadService } = await import('./csvBulkUpload.service');
+  const result = await CsvBulkUploadService.bulkUploadProduction(req.file.path);
+
+  sendResponse(res, {
+    statusCode: httpStatus.CREATED,
+    success: true,
+    message: 'CSV uploaded successfully',
+    data: result,
+  });
+});
+
 export const ProductionController = {
   createProduction,
   getAllProduction,
@@ -72,4 +89,5 @@ export const ProductionController = {
   updateProduction,
   deleteProduction,
   getProductionSummary,
+  bulkUploadProduction,
 };

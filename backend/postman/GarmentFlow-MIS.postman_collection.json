@@ -1,0 +1,279 @@
+{
+  "info": {
+    "name": "GarmentFlow MIS API",
+    "description": "Enterprise Apparel Manufacturing & Logistics Management Information System API Collection",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:5000/api",
+      "type": "string"
+    },
+    {
+      "key": "token",
+      "value": "",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "Authentication",
+      "item": [
+        {
+          "name": "Admin Login",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"admin@gmail.com\",\n  \"password\": \"123456\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/auth/login", "host": ["{{baseUrl}}"], "path": ["auth", "login"] }
+          }
+        },
+        {
+          "name": "Admin Profile (Me)",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": { "raw": "{{baseUrl}}/auth/me", "host": ["{{baseUrl}}"], "path": ["auth", "me"] }
+          }
+        },
+        {
+          "name": "Admin Logout",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": { "raw": "{{baseUrl}}/auth/logout", "host": ["{{baseUrl}}"], "path": ["auth", "logout"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Styles",
+      "item": [
+        {
+          "name": "Create Style",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"buyer_name\": \"H&M Group\",\n  \"style_no\": \"HM-TSHIRT-2026-X1\",\n  \"smv\": 9.5,\n  \"order_qty\": 20000\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/styles", "host": ["{{baseUrl}}"], "path": ["styles"] }
+          }
+        },
+        {
+          "name": "Get All Styles",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": { "raw": "{{baseUrl}}/styles?page=1&limit=10", "host": ["{{baseUrl}}"], "path": ["styles"] }
+          }
+        },
+        {
+          "name": "Get Style By ID",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": { "raw": "{{baseUrl}}/styles/1", "host": ["{{baseUrl}}"], "path": ["styles", "1"] }
+          }
+        },
+        {
+          "name": "Update Style",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"order_qty\": 25000\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/styles/1", "host": ["{{baseUrl}}"], "path": ["styles", "1"] }
+          }
+        },
+        {
+          "name": "Delete Style",
+          "request": {
+            "method": "DELETE",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": { "raw": "{{baseUrl}}/styles/1", "host": ["{{baseUrl}}"], "path": ["styles", "1"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Production",
+      "item": [
+        {
+          "name": "Create Production Entry",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"prod_date\": \"2026-11-27\",\n  \"floor_no\": 2,\n  \"line_no\": 4,\n  \"style_id\": 1,\n  \"operators_present\": 25,\n  \"working_minutes\": 480,\n  \"output_qty\": 800,\n  \"defect_qty\": 16\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/production", "host": ["{{baseUrl}}"], "path": ["production"] }
+          }
+        },
+        {
+          "name": "Get All Production",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": { "raw": "{{baseUrl}}/production?page=1&limit=10", "host": ["{{baseUrl}}"], "path": ["production"] }
+          }
+        },
+        {
+          "name": "Get Production Summary",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": { "raw": "{{baseUrl}}/production/summary", "host": ["{{baseUrl}}"], "path": ["production", "summary"] }
+          }
+        },
+        {
+          "name": "Bulk Upload CSV",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "file",
+                  "type": "file",
+                  "src": "csv-tests/valid-production.csv"
+                }
+              ]
+            },
+            "url": { "raw": "{{baseUrl}}/production/bulk-upload", "host": ["{{baseUrl}}"], "path": ["production", "bulk-upload"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Vehicles",
+      "item": [
+        {
+          "name": "Create Vehicle",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"reg_no\": \"DHK-METRO-CHA-99-1001\",\n  \"vehicle_type\": \"Staff Bus\",\n  \"seat_capacity\": 36,\n  \"status\": \"Active\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/vehicles", "host": ["{{baseUrl}}"], "path": ["vehicles"] }
+          }
+        },
+        {
+          "name": "Get All Vehicles",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": { "raw": "{{baseUrl}}/vehicles", "host": ["{{baseUrl}}"], "path": ["vehicles"] }
+          }
+        },
+        {
+          "name": "Update Vehicle Status",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"Under Maintenance\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/vehicles/1/status", "host": ["{{baseUrl}}"], "path": ["vehicles", "1", "status"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Trips",
+      "item": [
+        {
+          "name": "Get Available Vehicles for Time Window",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": {
+              "raw": "{{baseUrl}}/trips/availability?departure_time=2026-11-28T09:00:00Z&estimated_return_time=2026-11-28T12:00:00Z&min_capacity=20",
+              "host": ["{{baseUrl}}"],
+              "path": ["trips", "availability"]
+            }
+          }
+        },
+        {
+          "name": "Book Trip",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"vehicle_id\": 1,\n  \"route_name\": \"Factory to Airport VIP\",\n  \"departure_time\": \"2026-11-28T08:00:00Z\",\n  \"estimated_return_time\": \"2026-11-28T11:00:00Z\",\n  \"passenger_count\": 20,\n  \"status\": \"Scheduled\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/trips", "host": ["{{baseUrl}}"], "path": ["trips"] }
+          }
+        },
+        {
+          "name": "Dispatch Trip",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": { "raw": "{{baseUrl}}/trips/1/dispatch", "host": ["{{baseUrl}}"], "path": ["trips", "1", "dispatch"] }
+          }
+        },
+        {
+          "name": "Complete Trip",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": { "raw": "{{baseUrl}}/trips/1/complete", "host": ["{{baseUrl}}"], "path": ["trips", "1", "complete"] }
+          }
+        },
+        {
+          "name": "Cancel Trip",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": { "raw": "{{baseUrl}}/trips/1/cancel", "host": ["{{baseUrl}}"], "path": ["trips", "1", "cancel"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Executive Dashboard",
+      "item": [
+        {
+          "name": "Get MIS Summary",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": { "raw": "{{baseUrl}}/dashboard/summary", "host": ["{{baseUrl}}"], "path": ["dashboard", "summary"] }
+          }
+        }
+      ]
+    }
+  ]
+}

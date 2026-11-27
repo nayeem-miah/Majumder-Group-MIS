@@ -1,0 +1,4 @@
+prod_date,floor_no,line_no,style_no,operators_present,working_minutes,output_qty,defect_qty
+2026-11-26,2,1,HM-TSHIRT-2026-A1,20,60,150,5
+2026-11-26,2,2,ZR-DENIM-JACKET-09,18,60,120,3
+2026-11-26,3,1,MS-POLO-CLASSIC-04,22,60,180,8

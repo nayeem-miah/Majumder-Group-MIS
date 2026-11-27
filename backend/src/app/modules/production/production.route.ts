@@ -1,10 +1,18 @@
 import express from 'express';
 import auth from '../../middlewares/auth';
 import validateRequest from '../../middlewares/validateRequest';
+import { csvUpload } from '../../utils/csvUpload';
 import { ProductionController } from './production.controller';
 import { ProductionValidation } from './production.validation';
 
 const router = express.Router();
+
+router.post(
+  '/bulk-upload',
+  auth('ADMIN'),
+  csvUpload.single('file'),
+  ProductionController.bulkUploadProduction
+);
 
 router.get(
   '/summary',
