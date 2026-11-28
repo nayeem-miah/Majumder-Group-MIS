@@ -22,10 +22,50 @@ export interface ParsedCsvRow {
 }
 
 /**
+ * Splits one CSV line into fields, honouring double-quoted values so that
+ * commas (and escaped quotes) inside a quoted field are preserved.
+ */
+const splitCsvLine = (line: string): string[] => {
+  const fields: string[] = [];
+  let field = '';
+  let inQuotes = false;
+
+  for (let i = 0; i < line.length; i++) {
+    const char = line[i];
+    if (inQuotes) {
+      if (char === '"') {
+        if (line[i + 1] === '"') {
+          field += '"';
+          i++;
+        } else {
+          inQuotes = false;
+        }
+      } else {
+        field += char;
+      }
+    } else if (char === '"' && field.trim() === '') {
+      inQuotes = true;
+      field = '';
+    } else if (char === ',') {
+      fields.push(field);
+      field = '';
+    } else {
+      field += char;
+    }
+  }
+  fields.push(field);
+
+  return fields;
+};
+
+/**
  * Parses raw CSV string safely supporting headers and quoted values
  */
 export const parseCsvContent = (content: string): { headers: string[]; rows: Record<string, string>[] } => {
   const lines = content
+    // "CSV UTF-8" exports from Excel begin with a UTF-8 BOM, which would
+    // otherwise become part of the first header name.
+    .replace(/^\uFEFF/, '')
     .split(/\r?\n/)
     .map((l) => l.trim())
     .filter((l) => l.length > 0);
@@ -34,11 +74,11 @@ export const parseCsvContent = (content: string): { headers: string[]; rows: Rec
     return { headers: [], rows: [] };
   }
 
-  const rawHeaders = lines[0].split(',').map((h) => h.trim().toLowerCase());
+  const rawHeaders = splitCsvLine(lines[0]).map((h) => h.trim().toLowerCase());
   const rows: Record<string, string>[] = [];
 
   for (let i = 1; i < lines.length; i++) {
-    const values = lines[i].split(',').map((v) => v.trim());
+    const values = splitCsvLine(lines[i]).map((v) => v.trim());
     const rowObj: Record<string, string> = {};
     rawHeaders.forEach((header, index) => {
       rowObj[header] = values[index] !== undefined ? values[index] : '';
@@ -235,18 +275,21 @@ const bulkUploadProduction = async (filePath: string) => {
     // Collect all distinct style numbers in sorted order to avoid deadlocks
     const uniqueStyleNos = Array.from(new Set(parsedRows.map((r) => r.style_no))).sort();
 
-    // Query and lock all referenced styles in the database
+    // Query and lock all referenced styles in the database.
+    // Matching is case-insensitive (and trimmed) so a CSV exported as
+    // "hm-tshirt-2026-a1" still resolves to the stored "HM-TSHIRT-2026-A1",
+    // consistent with how the style module enforces uniqueness.
     const stylesRes = await client.query(
       `SELECT style_id, style_no, smv, order_qty
        FROM styles
-       WHERE style_no = ANY($1)
+       WHERE LOWER(style_no) = ANY($1)
        FOR UPDATE`,
-      [uniqueStyleNos]
+      [uniqueStyleNos.map((s) => s.toLowerCase())]
     );
 
     const styleMap = new Map<string, { style_id: string; style_no: string; smv: number; order_qty: number }>();
     stylesRes.rows.forEach((s) => {
-      styleMap.set(s.style_no, {
+      styleMap.set(s.style_no.toLowerCase(), {
         style_id: s.style_id,
         style_no: s.style_no,
         smv: parseFloat(s.smv),
@@ -255,8 +298,10 @@ const bulkUploadProduction = async (filePath: string) => {
     });
 
     // Verify all styles exist
+    const missingStyles = new Set<string>();
     for (const r of parsedRows) {
-      if (!styleMap.has(r.style_no)) {
+      if (!styleMap.has(r.style_no.toLowerCase())) {
+        missingStyles.add(r.style_no);
         errors.push({
           row: r.rowNum,
           field: 'style_no',
@@ -266,11 +311,27 @@ const bulkUploadProduction = async (filePath: string) => {
     }
 
     if (errors.length > 0) {
+      // When the failure is caused by unknown style numbers, tell the user
+      // exactly which style numbers are usable instead of a bare rejection.
+      let message = 'CSV upload failed. All records have been rolled back.';
+      if (missingStyles.size > 0) {
+        const allStylesRes = await client.query(
+          'SELECT style_no FROM styles ORDER BY style_no ASC'
+        );
+        const available = allStylesRes.rows.map((s) => s.style_no);
+        const shown = available.slice(0, 20);
+        const suffix =
+          available.length > shown.length
+            ? ` (+${available.length - shown.length} more)`
+            : '';
+        message =
+          available.length > 0
+            ? `${message} Valid style numbers: ${shown.join(', ')}${suffix}.`
+            : `${message} No styles exist yet - create a style first, then upload the CSV again.`;
+      }
+
       await client.query('ROLLBACK');
-      const errRes: any = new ApiError(
-        httpStatus.BAD_REQUEST,
-        'CSV upload failed. All records have been rolled back.'
-      );
+      const errRes: any = new ApiError(httpStatus.BAD_REQUEST, message);
       errRes.errors = errors;
       throw errRes;
     }
@@ -294,7 +355,7 @@ const bulkUploadProduction = async (filePath: string) => {
     const batchProducedMap = new Map<string, number>();
 
     for (const r of parsedRows) {
-      const style = styleMap.get(r.style_no)!;
+      const style = styleMap.get(r.style_no.toLowerCase())!;
       const initialTotal = cumProducedMap.get(style.style_id.toString()) || 0;
       const currentBatchTotal = batchProducedMap.get(style.style_id.toString()) || 0;
       const newTotal = initialTotal + currentBatchTotal + r.output_qty;
@@ -323,7 +384,7 @@ const bulkUploadProduction = async (filePath: string) => {
 
     // 3. Insert all records inside the transaction
     for (const r of parsedRows) {
-      const style = styleMap.get(r.style_no)!;
+      const style = styleMap.get(r.style_no.toLowerCase())!;
       await client.query(
         `INSERT INTO line_production (
           prod_date, floor_no, line_no, style_id, operators_present, working_minutes, output_qty, defect_qty
