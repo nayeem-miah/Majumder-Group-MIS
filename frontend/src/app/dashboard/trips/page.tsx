@@ -11,6 +11,7 @@ import {
   controlClass,
   inputClass,
 } from '../../../components/ui';
+import { ConfirmDialog } from '../../../components/ConfirmDialog';
 import { api, query } from '../../../lib/api';
 import type { Trip, Vehicle } from '../../../lib/types';
 
@@ -103,6 +104,11 @@ export default function Trips() {
   const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState(false);
   const [status, setStatus] = useState('');
+  const [pending, setPending] = useState<{
+    trip: Trip;
+    next: 'dispatch' | 'complete' | 'cancel';
+  } | null>(null);
+  const [acting, setActing] = useState(false);
 
   const closeModal = () => setOpen(false);
 
@@ -166,19 +172,32 @@ export default function Trips() {
     }
   }
 
-  async function action(
-    trip: Trip,
-    next: 'dispatch' | 'complete' | 'cancel',
-  ) {
-    if (!confirm(`${next} this trip?`)) return;
+  function action(trip: Trip, next: 'dispatch' | 'complete' | 'cancel') {
+    setPending({ trip, next });
+  }
+
+  async function runAction() {
+    if (!pending) return;
+    setActing(true);
     setError('');
     try {
-      await api(`/trips/${trip.trip_id}/${next}`, { method: 'PATCH' });
+      await api(`/trips/${pending.trip.trip_id}/${pending.next}`, {
+        method: 'PATCH',
+      });
+      setPending(null);
       load();
     } catch (x) {
       setError(x instanceof Error ? x.message : 'Action failed');
+    } finally {
+      setActing(false);
     }
   }
+
+  const actionLabels = {
+    dispatch: 'Dispatch',
+    complete: 'Complete',
+    cancel: 'Cancel',
+  } as const;
 
   return (
     <>
@@ -397,6 +416,20 @@ export default function Trips() {
           </div>
         </div>
       ) : null}
+
+      {/* Action confirmation modal */}
+      <ConfirmDialog
+        open={Boolean(pending)}
+        title={`Confirm ${pending ? actionLabels[pending.next] : ''}`}
+        message={`Are you sure you want to ${
+          pending ? actionLabels[pending.next].toLowerCase() : ''
+        } this trip?`}
+        confirmLabel={pending ? actionLabels[pending.next] : 'Confirm'}
+        destructive={pending?.next === 'cancel'}
+        busy={acting}
+        onConfirm={() => void runAction()}
+        onCancel={() => setPending(null)}
+      />
     </>
   );
 }

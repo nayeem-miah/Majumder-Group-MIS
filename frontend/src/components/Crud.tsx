@@ -3,6 +3,7 @@
 import { ChevronLeft, ChevronRight, Pencil, Plus, Trash2, X } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { api, query } from '../lib/api';
+import { ConfirmDialog } from './ConfirmDialog';
 import {
   Button,
   Card,
@@ -48,6 +49,8 @@ export function Crud({
   const [edit, setEdit] = useState<any | null>(null);
   const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<any | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   const shortTitle = title.replace(' Management', '');
   const rowId = (row: any) => row[columns[0].key] ?? row.id;
@@ -110,14 +113,18 @@ export function Crud({
     }
   }
 
-  async function del(row: any) {
-    if (!confirm('Delete this record?')) return;
+  async function del() {
+    if (!deleteTarget) return;
+    setDeleting(true);
     setError('');
     try {
-      await api(`${path}/${rowId(row)}`, { method: 'DELETE' });
+      await api(`${path}/${rowId(deleteTarget)}`, { method: 'DELETE' });
+      setDeleteTarget(null);
       load();
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Delete failed');
+    } finally {
+      setDeleting(false);
     }
   }
 
@@ -237,7 +244,7 @@ export function Crud({
                           type="button"
                           aria-label="Delete record"
                           className="grid h-8 w-8 place-items-center rounded-md border border-red-200 text-red-600 transition hover:bg-red-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500"
-                          onClick={() => del(row)}
+                          onClick={() => setDeleteTarget(row)}
                         >
                           <Trash2 className="h-3.5 w-3.5" aria-hidden="true" />
                         </button>
@@ -367,6 +374,17 @@ export function Crud({
           </div>
         </div>
       ) : null}
+
+      <ConfirmDialog
+        open={Boolean(deleteTarget)}
+        title="Delete record"
+        message="Delete this record? This action cannot be undone."
+        confirmLabel="Delete"
+        destructive
+        busy={deleting}
+        onConfirm={() => void del()}
+        onCancel={() => setDeleteTarget(null)}
+      />
     </>
   );
 }
